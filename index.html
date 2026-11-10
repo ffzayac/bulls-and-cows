@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Быки и коровы</title>
+<style>
+  :root {
+    --bg: #12141a;
+    --panel: #1b1e27;
+    --panel2: #232735;
+    --text: #e8eaf0;
+    --muted: #8a90a3;
+    --accent: #5b8cff;
+    --accent2: #38c172;
+    --bull: #38c172;
+    --cow: #f0a636;
+    --danger: #e05252;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .app { width: 100%; max-width: 560px; }
+  header { text-align: center; margin-bottom: 20px; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .panel {
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* Загаданное число (скрыто до победы) */
+  .secret-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .secret-box {
+    width: 46px; height: 54px;
+    background: var(--panel2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700;
+  }
+  .secret-box.hidden .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); opacity: 0.5;
+  }
+  .secret-box.revealed { background: var(--accent2); color: #0a0f0a; }
+  .secret-caption { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+  /* Ввод попытки */
+  .input-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+  .digit-box {
+    width: 46px; height: 54px;
+    background: var(--panel2);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .digit-box.active { border-color: var(--accent); }
+  .digit-box.duplicate { border-color: var(--danger); }
+
+  .keypad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .key {
+    padding: 12px 0;
+    background: var(--panel2);
+    color: var(--text);
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, transform 0.05s;
+  }
+  .key:hover { background: #2c3145; }
+  .key:active { transform: scale(0.95); }
+  .key.used { opacity: 0.35; cursor: not-allowed; }
+  .key.back { color: var(--cow); font-size: 15px; }
+  .key.clear { color: var(--danger); font-size: 15px; }
+
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+  button.primary {
+    flex: 1;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary {
+    padding: 13px 18px;
+    background: var(--panel2);
+    color: var(--text);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button.secondary:hover { background: #2c3145; }
+
+  .msg {
+    text-align: center;
+    font-size: 14px;
+    min-height: 20px;
+    margin-top: 10px;
+    color: var(--muted);
+  }
+  .msg.error { color: var(--danger); }
+
+  /* История */
+  .history h2 { font-size: 15px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .history-empty { color: var(--muted); text-align: center; font-size: 14px; padding: 12px; }
+  .attempt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--panel2);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .attempt-num { color: var(--muted); font-size: 13px; width: 36px; flex-shrink: 0; }
+  .attempt-guess { display: flex; gap: 5px; }
+  .attempt-digit {
+    width: 32px; height: 36px;
+    background: var(--panel);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 700;
+  }
+  .attempt-digits.win .attempt-digit { background: var(--accent2); color: #0a0f0a; }
+  .score { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 13px; font-weight: 700;
+  }
+  .badge.bulls { background: rgba(56,193,114,0.15); color: var(--bull); }
+  .badge.cows { background: rgba(240,166,54,0.15); color: var(--cow); }
+
+  /* Победа */
+  .win {
+    text-align: center;
+    background: rgba(56,193,114,0.1);
+    border: 1px solid rgba(56,193,114,0.4);
+  }
+  .win .title { font-size: 22px; font-weight: 700; color: var(--bull); margin-bottom: 4px; }
+  .win .stat { color: var(--muted); font-size: 14px; }
+  .hidden { display: none; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🐂 Быки и коровы</h1>
+    <div class="subtitle">Угадайте 4-значное число с неповторяющимися цифрами</div>
+  </header>
+
+  <div class="panel">
+    <div class="secret-row" id="secretRow"></div>
+    <div class="secret-caption" id="secretCaption">Число загадано компьютером</div>
+  </div>
+
+  <div class="panel win hidden" id="winPanel">
+    <div class="title">🎉 Победа!</div>
+    <div class="stat" id="winStat"></div>
+  </div>
+
+  <div class="panel">
+    <div class="input-row" id="inputRow"></div>
+    <div class="keypad" id="keypad"></div>
+    <div class="actions">
+      <button class="primary" id="guessBtn" disabled>Проверить</button>
+      <button class="secondary" id="newGameBtn">Новая игра</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="panel history">
+    <h2>История попыток</h2>
+    <div id="historyList"><div class="history-empty">Пока нет попыток</div></div>
+  </div>
+
+  <footer>«Быки» — цифра на своём месте. «Коровы» — цифра есть, но на другом месте.</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LEN = 4;
+  var secret = '';
+  var guess = '';
+  var attempts = [];
+  var solved = false;
+
+  var inputRow = document.getElementById('inputRow');
+  var keypad = document.getElementById('keypad');
+  var guessBtn = document.getElementById('guessBtn');
+  var msgEl = document.getElementById('msg');
+  var historyList = document.getElementById('historyList');
+  var winPanel = document.getElementById('winPanel');
+  var winStat = document.getElementById('winStat');
+  var secretRow = document.getElementById('secretRow');
+  var secretCaption = document.getElementById('secretCaption');
+
+  function randomSecret() {
+    var digits = '0123456789'.split('');
+    var out = '';
+    for (var i = 0; i < LEN; i++) {
+      var idx = Math.floor(Math.random() * digits.length);
+      out += digits.splice(idx, 1)[0];
+    }
+    return out;
+  }
+
+  function score(guessStr) {
+    var bulls = 0, cows = 0;
+    for (var i = 0; i < LEN; i++) {
+      if (guessStr[i] === secret[i]) bulls++;
+      else if (secret.indexOf(guessStr[i]) !== -1) cows++;
+    }
+    return { bulls: bulls, cows: cows };
+  }
+
+  function plural(n, one, few, many) {
+    var mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+    return many;
+  }
+
+  function renderSecret() {
+    secretRow.innerHTML = '';
+    for (var i = 0; i < LEN; i++) {
+      var box = document.createElement('div');
+      box.className = 'secret-box' + (solved ? ' revealed' : ' hidden');
+      if (solved) {
+        box.textContent = secret[i];
+      } else {
+        var dot = document.createElement('span');
+        dot.className = 'dot';
+        box.appendChild(dot);
+      }
+      secretRow.appendChild(box);
+    }
+  }
+
+  function renderInput() {
+    inputRow.innerHTML = '';
+    for (var i = 0; i < LEN; i++) {
+      var box = document.createElement('div');
+      box.className = 'digit-box' + (i === guess.length && !solved ? ' active' : '');
+      box.textContent = guess[i] || '';
+      inputRow.appendChild(box);
+    }
+    var hasDup = (guess.length) >= 2 && new Set(guess).size !== guess.length;
+    if (hasDup) {
+      var seen = {};
+      for (var j = 0; j < LEN; j++) {
+        var d = guess[j];
+        if (!d) continue;
+        if (seen[d]) inputRow.children[j].classList.add('duplicate');
+        seen[d] = true;
+      }
+    }
+    guessBtn.disabled = solved || guess.length !== LEN || hasDup;
+    renderKeypad();
+  }
+
+  function renderKeypad() {
+    keypad.innerHTML = '';
+    var keys = ['1','2','3','4','5','6','7','8','9','0'];
+    keys.forEach(function (d) {
+      var btn = document.createElement('button');
+      btn.className = 'key' + (guess.indexOf(d) !== -1 ? ' used' : '');
+      btn.textContent = d;
+      btn.disabled = solved || guess.indexOf(d) !== -1 || guess.length >= LEN;
+      btn.addEventListener('click', function () {
+        if (guess.length < LEN) {
+          guess += d;
+          renderInput();
+        }
+      });
+      keypad.appendChild(btn);
+    });
+    var back = document.createElement('button');
+    back.className = 'key back';
+    back.textContent = '⌫';
+    back.disabled = solved || guess.length === 0;
+    back.addEventListener('click', function () {
+      guess = guess.slice(0, -1);
+      renderInput();
+    });
+    keypad.appendChild(back);
+    var clear = document.createElement('button');
+    clear.className = 'key clear';
+    clear.textContent = 'Очистить';
+    clear.disabled = solved || guess.length === 0;
+    clear.addEventListener('click', function () {
+      guess = '';
+      renderInput();
+    });
+    keypad.appendChild(clear);
+  }
+
+  function renderHistory() {
+    if (attempts.length === 0) {
+      historyList.innerHTML = '<div class="history-empty">Пока нет попыток</div>';
+      return;
+    }
+    historyList.innerHTML = '';
+    for (var idx = attempts.length - 1; idx >= 0; idx--) {
+      var a = attempts[idx];
+      var row = document.createElement('div');
+      row.className = 'attempt';
+
+      var num = document.createElement('div');
+      num.className = 'attempt-num';
+      num.textContent = '#' + (idx + 1);
+      row.appendChild(num);
+
+      var dg = document.createElement('div');
+      dg.className = 'attempt-guess' + (a.bulls === LEN ? ' win' : '');
+      for (var i = 0; i < LEN; i++) {
+        var d = document.createElement('span');
+        d.className = 'attempt-digit';
+        d.textContent = a.guess[i];
+        dg.appendChild(d);
+      }
+      row.appendChild(dg);
+
+      var sc = document.createElement('div');
+      sc.className = 'score';
+      var b = document.createElement('span');
+      b.className = 'badge bulls';
+      b.textContent = '🐂 ' + a.bulls;
+      var c = document.createElement('span');
+      c.className = 'badge cows';
+      c.textContent = '🐄 ' + a.cows;
+      sc.appendChild(b);
+      sc.appendChild(c);
+      row.appendChild(sc);
+
+      historyList.appendChild(row);
+    }
+  }
+
+  function setMsg(text, isError) {
+    msgEl.textContent = text || '';
+    msgEl.className = 'msg' + (isError ? ' error' : '');
+  }
+
+  function submitGuess() {
+    if (solved || guess.length !== LEN || new Set(guess).size !== LEN) return;
+    var s = score(guess);
+    attempts.push({ guess: guess, bulls: s.bulls, cows: s.cows });
+    if (s.bulls === LEN) {
+      solved = true;
+      renderSecret();
+      renderInput();
+      renderHistory();
+      winPanel.classList.remove('hidden');
+      winStat.textContent = 'Загаданное число: ' + secret + '. Попыток: ' + attempts.length + '.';
+      setMsg('');
+      secretCaption.textContent = 'Число раскрыто';
+    } else {
+      guess = '';
+      renderInput();
+      renderHistory();
+      setMsg('Быков: ' + s.bulls + ' ' + plural(s.bulls,'бык','быка','быков') +
+        ', коров: ' + s.cows + ' ' + plural(s.cows,'корова','коровы','коров'));
+    }
+  }
+
+  function newGame() {
+    secret = randomSecret();
+    guess = '';
+    attempts = [];
+    solved = false;
+    winPanel.classList.add('hidden');
+    secretCaption.textContent = 'Число загадано компьютером';
+    setMsg('');
+    renderSecret();
+    renderInput();
+    renderHistory();
+  }
+
+  guessBtn.addEventListener('click', submitGuess);
+  document.getElementById('newGameBtn').addEventListener('click', newGame);
+  document.addEventListener('keydown', function (e) {
+    if (solved) return;
+    if (/^[0-9]$/.test(e.key) && guess.length < LEN && guess.indexOf(e.key) === -1) {
+      guess += e.key;
+      renderInput();
+    } else if (e.key === 'Backspace') {
+      guess = guess.slice(0, -1);
+      renderInput();
+    } else if (e.key === 'Enter') {
+      submitGuess();
+    }
+  });
+
+  newGame();
+})();
+</script>
+</body>
+</html>
