@@ -101,7 +101,7 @@
   .key:active { transform: scale(0.95); }
   .key.used { opacity: 0.35; cursor: not-allowed; }
   .key.back { color: var(--cow); font-size: 15px; }
-  .key.clear { color: var(--danger); font-size: clamp(12px, 3.2vw, 15px); white-space: nowrap; }
+  .key.clear { color: var(--danger); font-size: clamp(11px, 3.2vw, 15px); white-space: nowrap; }
 
   .actions { display: flex; gap: 10px; margin-top: 14px; }
   button.primary {
@@ -367,7 +367,7 @@
     keypad.appendChild(back);
     var clear = document.createElement('button');
     clear.className = 'key clear';
-    clear.textContent = 'Очистить';
+    clear.textContent = 'Сброс';
     clear.disabled = solved || guess.length === 0;
     clear.addEventListener('click', function () {
       guess = '';
